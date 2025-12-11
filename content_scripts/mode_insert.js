@@ -13,17 +13,23 @@ class InsertMode extends Mode {
     this.global = options.global;
 
     this.passNextKeyKeys = [];
+    this.insertModeCommands = [];
 
     // This list of keys is parsed from the user's key mapping config by commands.js, and stored in
     // chrome.storage.session.
-    chrome.storage.session.get("passNextKeyKeys").then((value) => {
+    chrome.storage.session.get(["passNextKeyKeys", "insertModeCommands"]).then((value) => {
       this.passNextKeyKeys = value.passNextKeyKeys || [];
+      this.insertModeCommands = value.insertModeCommands || [];
     });
 
     chrome.storage.onChanged.addListener(async (changes, areaName) => {
-      if (areaName != "local") return;
-      if (changes.passNextKeyKeys == null) return;
-      this.passNextKeyKeys = changes.passNextKeyKeys.newValue;
+      if (areaName != "session") return;
+      if (changes.passNextKeyKeys != null) {
+        this.passNextKeyKeys = changes.passNextKeyKeys.newValue;
+      }
+      if (changes.insertModeCommands != null) {
+        this.insertModeCommands = changes.insertModeCommands.newValue;
+      }
     });
 
     const handleKeyEvent = (event) => {
@@ -40,7 +46,16 @@ class InsertMode extends Mode {
 
       // Check for a pass-next-key key.
       const keyString = KeyboardUtils.getKeyCharString(event);
-      if (this.passNextKeyKeys.includes(keyString)) {
+      
+      // Check if this key is mapped to an insert mode command (background command with modifiers).
+      const insertModeCommand = this.insertModeCommands.find((cmd) => cmd.key === keyString);
+      if (insertModeCommand) {
+        chrome.runtime.sendMessage({
+          handler: "runBackgroundCommand",
+          registryEntry: insertModeCommand,
+          count: 1,
+        });
+      } else if (this.passNextKeyKeys.includes(keyString)) {
         new PassNextKeyMode();
       } else if ((event.type === "keydown") && KeyboardUtils.isEscape(event)) {
         if (DomUtils.isFocusable(activeElement)) {
