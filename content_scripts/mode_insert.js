@@ -20,9 +20,11 @@ class InsertMode extends Mode {
     chrome.storage.session.get(["passNextKeyKeys", "insertModeCommands"]).then((value) => {
       this.passNextKeyKeys = value?.passNextKeyKeys || [];
       this.updateInsertModeCommands(value?.insertModeCommands || []);
+    }).catch((error) => {
+      console.error("Vimium: Failed to load insert mode commands:", error);
     });
 
-    chrome.storage.onChanged.addListener(async (changes, areaName) => {
+    chrome.storage.onChanged.addListener((changes, areaName) => {
       // Check both local and session storage areas for compatibility.
       // passNextKeyKeys and insertModeCommands are stored in session storage,
       // but we check both to maintain compatibility with any existing behavior.
