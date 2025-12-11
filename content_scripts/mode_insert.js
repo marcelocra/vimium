@@ -18,22 +18,25 @@ class InsertMode extends Mode {
     // This list of keys is parsed from the user's key mapping config by commands.js, and stored in
     // chrome.storage.session.
     chrome.storage.session.get(["passNextKeyKeys", "insertModeCommands"]).then((value) => {
-      this.passNextKeyKeys = value?.passNextKeyKeys || [];
-      this.updateInsertModeCommands(value?.insertModeCommands || []);
+      this.passNextKeyKeys = value.passNextKeyKeys || [];
+      this.updateInsertModeCommands(value.insertModeCommands || []);
     }).catch((error) => {
       console.error("Vimium: Failed to load insert mode commands:", error);
     });
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
-      // Check both local and session storage areas for compatibility.
-      // passNextKeyKeys and insertModeCommands are stored in session storage,
-      // but we check both to maintain compatibility with any existing behavior.
-      if (areaName != "local" && areaName != "session") return;
-      if (changes.passNextKeyKeys != null) {
+      // passNextKeyKeys was originally checked in "local" storage for backward compatibility,
+      // but both passNextKeyKeys and insertModeCommands are actually stored in session storage.
+      // We check session storage for our new data and local for passNextKeyKeys compatibility.
+      if (areaName === "local" && changes.passNextKeyKeys != null) {
         this.passNextKeyKeys = changes.passNextKeyKeys.newValue || [];
-      }
-      if (changes.insertModeCommands != null) {
-        this.updateInsertModeCommands(changes.insertModeCommands.newValue || []);
+      } else if (areaName === "session") {
+        if (changes.passNextKeyKeys != null) {
+          this.passNextKeyKeys = changes.passNextKeyKeys.newValue || [];
+        }
+        if (changes.insertModeCommands != null) {
+          this.updateInsertModeCommands(changes.insertModeCommands.newValue || []);
+        }
       }
     });
 

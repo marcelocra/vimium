@@ -335,10 +335,11 @@ const Commands = {
         if (!key.startsWith("<")) return false;
         // Must be a background command
         if (!v.background) return false;
-        // Must have at least one modifier (a, c, or m).
-        // Note: Modifiers are sorted alphabetically during parsing, so <c-a-x> becomes <a-c-x>,
-        // which means we can simply check if the key starts with <a, <c, or <m.
-        return /^<[acm]/.test(key);
+        // Must have at least one of the primary modifiers: alt (a), ctrl (c), or meta (m).
+        // We check explicitly for these modifier strings to be robust to any future changes
+        // in key parsing or normalization.
+        return key.includes("-a-") || key.includes("-c-") || key.includes("-m-") ||
+          key.startsWith("<a-") || key.startsWith("<c-") || key.startsWith("<m-");
       })
       .map(([key, v]) => ({
         key,
