@@ -43,6 +43,7 @@ Navigating the current page:
     r       reload
     gs      view source
     i       enter insert mode -- all commands will be ignored until you hit Esc to exit
+              Note: commands with modifier keys (like <a-e>, <a-p>) work even in insert mode
     yy      copy the current url to the clipboard
     yf      copy a link url to the clipboard
     gf      cycle forward to the next frame
@@ -77,13 +78,15 @@ Manipulating tabs:
     g0      go to the first tab. Use ng0 to go to n-th tab
     g$      go to the last tab
     ^       visit the previously-visited tab
+    <a-e>   visit the previously-visited tab (works in insert mode)
     t       create tab
     yt      duplicate current tab
     x       close current tab
     X       restore closed tab (i.e. unwind the 'x' command)
     T       search through your open tabs
     W       move current tab to new window
-    <a-p>   pin/unpin current tab
+    <a-p>   pin/unpin current tab (works in insert mode)
+    <a-m>   mute/unmute current tab (works in insert mode)
 
 Using marks:
 
@@ -153,6 +156,11 @@ The following special keys are available for mapping:
 
 Shifts are automatically detected so, for example, `<c-&>` corresponds to ctrl+shift+7 on an English
 keyboard.
+
+**Insert Mode Shortcuts:** Commands that use modifier keys (alt, ctrl, or meta) can be triggered even
+when in insert mode (e.g., when focused on an input field). This allows you to use shortcuts like
+`<a-e>` to switch tabs without having to press Escape first. Only background commands with modifiers
+work in insert mode to avoid interfering with normal typing.
 
 ## More documentation
 
