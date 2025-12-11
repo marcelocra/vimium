@@ -325,6 +325,33 @@ const Commands = {
       .filter(([key, v]) => v.command == "passNextKey" && key.length > 1)
       .map(([key, v]) => key);
     await chrome.storage.session.set({ passNextKeyKeys: passNextKeys });
+
+    // Also store keys with modifiers that map to background commands, so they can work in insert
+    // mode. We only include keys with modifiers (alt, ctrl, meta) to avoid interfering with normal
+    // typing in input fields.
+    const insertModeCommands = Object.entries(this.keyToRegistryEntry)
+      .filter(([key, v]) => {
+        // Only include keys with modifiers (those starting with <)
+        if (!key.startsWith("<")) return false;
+        // Must be a background command
+        if (!v.background) return false;
+        // Must have at least one of the primary modifiers: alt (a), ctrl (c), or meta (m).
+        // We check explicitly for these modifier strings to be robust to any future changes
+        // in key parsing or normalization.
+        return key.includes("-a-") || key.includes("-c-") || key.includes("-m-") ||
+          key.startsWith("<a-") || key.startsWith("<c-") || key.startsWith("<m-");
+      })
+      .map(([key, v]) => ({
+        key,
+        // Include all relevant RegistryEntry properties except keySequence
+        command: v.command,
+        options: v.options,
+        noRepeat: v.noRepeat,
+        repeatLimit: v.repeatLimit,
+        background: v.background,
+        topFrame: v.topFrame,
+      }));
+    await chrome.storage.session.set({ insertModeCommands });
   },
 
   // This generates and installs a nested key-to-command mapping structure. There is an example in
@@ -464,6 +491,7 @@ const defaultKeyMappings = {
   "gt": "nextTab",
   "gT": "previousTab",
   "^": "visitPreviousTab",
+  "<a-e>": "visitPreviousTab",
   "<<": "moveTabLeft",
   ">>": "moveTabRight",
   "g0": "firstTab",

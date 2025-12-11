@@ -13,17 +13,31 @@ class InsertMode extends Mode {
     this.global = options.global;
 
     this.passNextKeyKeys = [];
+    this.insertModeCommandsMap = new Map();
 
     // This list of keys is parsed from the user's key mapping config by commands.js, and stored in
     // chrome.storage.session.
-    chrome.storage.session.get("passNextKeyKeys").then((value) => {
+    chrome.storage.session.get(["passNextKeyKeys", "insertModeCommands"]).then((value) => {
       this.passNextKeyKeys = value.passNextKeyKeys || [];
+      this.updateInsertModeCommands(value.insertModeCommands || []);
+    }).catch((error) => {
+      console.error("Vimium: Failed to load insert mode commands:", error);
     });
 
-    chrome.storage.onChanged.addListener(async (changes, areaName) => {
-      if (areaName != "local") return;
-      if (changes.passNextKeyKeys == null) return;
-      this.passNextKeyKeys = changes.passNextKeyKeys.newValue;
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      // passNextKeyKeys was originally checked in "local" storage for backward compatibility,
+      // but both passNextKeyKeys and insertModeCommands are actually stored in session storage.
+      // We check session storage for our new data and local for passNextKeyKeys compatibility.
+      if (areaName === "local" && changes.passNextKeyKeys != null) {
+        this.passNextKeyKeys = changes.passNextKeyKeys.newValue || [];
+      } else if (areaName === "session") {
+        if (changes.passNextKeyKeys != null) {
+          this.passNextKeyKeys = changes.passNextKeyKeys.newValue || [];
+        }
+        if (changes.insertModeCommands != null) {
+          this.updateInsertModeCommands(changes.insertModeCommands.newValue || []);
+        }
+      }
     });
 
     const handleKeyEvent = (event) => {
@@ -40,7 +54,19 @@ class InsertMode extends Mode {
 
       // Check for a pass-next-key key.
       const keyString = KeyboardUtils.getKeyCharString(event);
-      if (this.passNextKeyKeys.includes(keyString)) {
+      
+      // Check if this key is mapped to an insert mode command (background command with modifiers).
+      const insertModeCommand = this.insertModeCommandsMap.get(keyString);
+      if (insertModeCommand) {
+        chrome.runtime.sendMessage({
+          handler: "runBackgroundCommand",
+          registryEntry: insertModeCommand,
+          count: 1,
+        }).catch((error) => {
+          console.error("Vimium: Failed to execute insert mode command:", error);
+        });
+        return this.suppressEvent;
+      } else if (this.passNextKeyKeys.includes(keyString)) {
         new PassNextKeyMode();
       } else if ((event.type === "keydown") && KeyboardUtils.isEscape(event)) {
         if (DomUtils.isFocusable(activeElement)) {
@@ -70,6 +96,16 @@ class InsertMode extends Mode {
     // instance.
     if (this.permanent) {
       InsertMode.permanentInstance = this;
+    }
+  }
+
+  // Helper method to convert insertModeCommands array to a Map for O(1) lookups
+  updateInsertModeCommands(commands) {
+    this.insertModeCommandsMap.clear();
+    if (commands) {
+      for (const cmd of commands) {
+        this.insertModeCommandsMap.set(cmd.key, cmd);
+      }
     }
   }
 
