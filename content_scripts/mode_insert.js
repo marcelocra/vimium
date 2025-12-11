@@ -13,24 +13,35 @@ class InsertMode extends Mode {
     this.global = options.global;
 
     this.passNextKeyKeys = [];
-    this.insertModeCommands = [];
+    this.insertModeCommandsMap = new Map();
 
     // This list of keys is parsed from the user's key mapping config by commands.js, and stored in
     // chrome.storage.session.
     chrome.storage.session.get(["passNextKeyKeys", "insertModeCommands"]).then((value) => {
       this.passNextKeyKeys = value.passNextKeyKeys || [];
-      this.insertModeCommands = value.insertModeCommands || [];
+      this.updateInsertModeCommands(value.insertModeCommands || []);
     });
 
     chrome.storage.onChanged.addListener(async (changes, areaName) => {
-      if (areaName != "session") return;
+      // Check both local and session storage areas for compatibility.
+      // passNextKeyKeys and insertModeCommands are stored in session storage,
+      // but we check both to maintain compatibility with any existing behavior.
+      if (areaName != "local" && areaName != "session") return;
       if (changes.passNextKeyKeys != null) {
         this.passNextKeyKeys = changes.passNextKeyKeys.newValue;
       }
       if (changes.insertModeCommands != null) {
-        this.insertModeCommands = changes.insertModeCommands.newValue;
+        this.updateInsertModeCommands(changes.insertModeCommands.newValue);
       }
     });
+
+    // Helper method to convert insertModeCommands array to a Map for O(1) lookups
+    this.updateInsertModeCommands = (commands) => {
+      this.insertModeCommandsMap.clear();
+      for (const cmd of commands) {
+        this.insertModeCommandsMap.set(cmd.key, cmd);
+      }
+    };
 
     const handleKeyEvent = (event) => {
       if (!this.isActive(event)) {
@@ -48,7 +59,7 @@ class InsertMode extends Mode {
       const keyString = KeyboardUtils.getKeyCharString(event);
       
       // Check if this key is mapped to an insert mode command (background command with modifiers).
-      const insertModeCommand = this.insertModeCommands.find((cmd) => cmd.key === keyString);
+      const insertModeCommand = this.insertModeCommandsMap.get(keyString);
       if (insertModeCommand) {
         chrome.runtime.sendMessage({
           handler: "runBackgroundCommand",
