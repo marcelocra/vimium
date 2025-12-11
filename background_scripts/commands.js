@@ -335,11 +335,14 @@ const Commands = {
         if (!key.startsWith("<")) return false;
         // Must be a background command
         if (!v.background) return false;
-        // Must have at least one modifier (a, c, or m)
+        // Must have at least one modifier (a, c, or m).
+        // Note: Modifiers are sorted alphabetically during parsing, so <c-a-x> becomes <a-c-x>,
+        // which means we can simply check if the key starts with <a, <c, or <m.
         return /^<[acm]/.test(key);
       })
       .map(([key, v]) => ({
         key,
+        // Include all relevant RegistryEntry properties except keySequence
         command: v.command,
         options: v.options,
         noRepeat: v.noRepeat,

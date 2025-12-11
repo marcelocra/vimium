@@ -18,8 +18,8 @@ class InsertMode extends Mode {
     // This list of keys is parsed from the user's key mapping config by commands.js, and stored in
     // chrome.storage.session.
     chrome.storage.session.get(["passNextKeyKeys", "insertModeCommands"]).then((value) => {
-      this.passNextKeyKeys = value.passNextKeyKeys || [];
-      this.updateInsertModeCommands(value.insertModeCommands || []);
+      this.passNextKeyKeys = value?.passNextKeyKeys || [];
+      this.updateInsertModeCommands(value?.insertModeCommands || []);
     });
 
     chrome.storage.onChanged.addListener(async (changes, areaName) => {
@@ -28,20 +28,12 @@ class InsertMode extends Mode {
       // but we check both to maintain compatibility with any existing behavior.
       if (areaName != "local" && areaName != "session") return;
       if (changes.passNextKeyKeys != null) {
-        this.passNextKeyKeys = changes.passNextKeyKeys.newValue;
+        this.passNextKeyKeys = changes.passNextKeyKeys.newValue || [];
       }
       if (changes.insertModeCommands != null) {
-        this.updateInsertModeCommands(changes.insertModeCommands.newValue);
+        this.updateInsertModeCommands(changes.insertModeCommands.newValue || []);
       }
     });
-
-    // Helper method to convert insertModeCommands array to a Map for O(1) lookups
-    this.updateInsertModeCommands = (commands) => {
-      this.insertModeCommandsMap.clear();
-      for (const cmd of commands) {
-        this.insertModeCommandsMap.set(cmd.key, cmd);
-      }
-    };
 
     const handleKeyEvent = (event) => {
       if (!this.isActive(event)) {
@@ -99,6 +91,16 @@ class InsertMode extends Mode {
     // instance.
     if (this.permanent) {
       InsertMode.permanentInstance = this;
+    }
+  }
+
+  // Helper method to convert insertModeCommands array to a Map for O(1) lookups
+  updateInsertModeCommands(commands) {
+    this.insertModeCommandsMap.clear();
+    if (commands) {
+      for (const cmd of commands) {
+        this.insertModeCommandsMap.set(cmd.key, cmd);
+      }
     }
   }
 
