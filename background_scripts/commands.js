@@ -338,7 +338,15 @@ const Commands = {
         // Must have at least one modifier (a, c, or m)
         return /^<[acm]/.test(key);
       })
-      .map(([key, v]) => ({ key, command: v.command, options: v.options }));
+      .map(([key, v]) => ({
+        key,
+        command: v.command,
+        options: v.options,
+        noRepeat: v.noRepeat,
+        repeatLimit: v.repeatLimit,
+        background: v.background,
+        topFrame: v.topFrame,
+      }));
     await chrome.storage.session.set({ insertModeCommands });
   },
 

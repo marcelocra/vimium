@@ -54,7 +54,10 @@ class InsertMode extends Mode {
           handler: "runBackgroundCommand",
           registryEntry: insertModeCommand,
           count: 1,
+        }).catch((error) => {
+          console.error("Vimium: Failed to execute insert mode command:", error);
         });
+        return this.suppressEvent;
       } else if (this.passNextKeyKeys.includes(keyString)) {
         new PassNextKeyMode();
       } else if ((event.type === "keydown") && KeyboardUtils.isEscape(event)) {
